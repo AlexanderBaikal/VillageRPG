@@ -8,7 +8,7 @@ import sys
 pygame.init()
 size = width, height = 1000, 800
 screen = pygame.display.set_mode(size)
-BG = (206,249,101)
+BG = (206, 249, 101)
 screen.fill(BG)
 
 
@@ -90,12 +90,14 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
         self.image = player_image
+        self.blood = False
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
         s = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
         pygame.draw.rect(s, pygame.Color("red"),
                          (0, self.rect.height // 2, self.rect.width, 5))
         self.mask = pygame.mask.from_surface(s)
+
 
 class Wolf(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
@@ -240,9 +242,6 @@ class Camera:
         self.dy = -(target.rect.y + target.rect.h // 2 - height // 2)
 
 
-
-
-
 if __name__ == '__main__':
     FPS = 60
     tile_images = {
@@ -273,6 +272,24 @@ if __name__ == '__main__':
                                       anim_folder + 'pixman_l4.png']))
     cf_images = list(map(load_image, map(lambda x: anim_folder + x, ['cf1.png', 'cf2.png',
                                                                      'cf3.png', 'cf4.png'])))
+    wl_images = list(map(load_image, [anim_folder + 'wolfs_l1.png',
+                                      anim_folder + 'wolfs_l2.png',
+                                      anim_folder + 'wolfs_l3.png'
+                                      ]))
+    wr_images = list(map(load_image, [anim_folder + 'wolfs_r1.png',
+                                      anim_folder + 'wolfs_r2.png',
+                                      anim_folder + 'wolfs_r3.png'
+                                      ]))
+    wu_images = list(map(load_image, [anim_folder + 'wolfs_u1.png',
+                                      anim_folder + 'wolfs_u2.png',
+                                      anim_folder + 'wolfs_u3.png'
+                                      ]))
+    wd_images = list(map(load_image, [anim_folder + 'wolfs_d1.png',
+                                      anim_folder + 'wolfs_d2.png',
+                                      anim_folder + 'wolfs_d3.png'
+                                      ]))
+    blood_img = load_image('blood.png')
+
     lcounter, rcounter, ucounter, dcounter = 0, 0, 0, 0
     tile_width = tile_height = 96
     camera = Camera()
@@ -297,17 +314,25 @@ if __name__ == '__main__':
     Border(0, 0, 0, (level_y + 1) * tile_height)
     Border((level_x + 1) * tile_width, 0, (level_x + 1) * tile_width, (level_y + 1) * tile_height)
 
-    wolf_start_pos = random.choice([(1, random.randint(1, level_y - 1)),
-                              (level_x - 1, random.randint(1, level_y - 1))])
-    wolf = Wolf(*wolf_start_pos)
+    # Спавн волка
+    while True:
+        wolf_start_pos = random.choice([(1, random.randint(1, level_y - 1)),
+                                        (level_x - 1, random.randint(1, level_y - 1))])
+        wolf = Wolf(*wolf_start_pos)
+        if not any(pygame.sprite.collide_mask(wolf, spr) for spr in rigid_group.sprites()):
+            break
+        else:
+            wolf.kill()
 
-    #
     motion = 'stop'
     step = 4
-    ctr, fire_ctr = 0, 0
+    ctr, w_ctr, w_dir_ctr, fire_ctr = 0, 0, 0, 0
+    w_direct = 'D'
     transi_step = 6
+    w_transi_step = 30
     cfcounter = 0
     stop = 'disable'
+    wlcounter, wrcounter, wucounter, wdcounter = 0, 0, 0, 0
     prev_x, prev_y = player.rect.x, player.rect.y
 
     while True:
@@ -344,6 +369,8 @@ if __name__ == '__main__':
             ctr = (ctr + 1) % transi_step
             if ctr == 0:
                 player.image = lf_images[lcounter]
+                if player.blood:
+                    player.image.blit(blood_img, (0, 0))
                 lcounter = (lcounter + 1) % len(lf_images)
             if not pygame.sprite.spritecollideany(player, vertical_borders) and \
                     not any(pygame.sprite.collide_mask(player, spr) for spr in rigid_group.sprites()):
@@ -359,6 +386,8 @@ if __name__ == '__main__':
             ctr = (ctr + 1) % transi_step
             if ctr == 0:
                 player.image = rg_images[rcounter]
+                if player.blood:
+                    player.image.blit(blood_img, (0, 0))
                 rcounter = (rcounter + 1) % len(rg_images)
             if not pygame.sprite.spritecollideany(player, vertical_borders) and \
                     not any(pygame.sprite.collide_mask(player, spr) for spr in rigid_group.sprites()):
@@ -374,6 +403,8 @@ if __name__ == '__main__':
             ctr = (ctr + 1) % transi_step
             if ctr == 0:
                 player.image = up_images[ucounter]
+                if player.blood:
+                    player.image.blit(blood_img, (0, 0))
                 ucounter = (ucounter + 1) % len(up_images)
             if not pygame.sprite.spritecollideany(player, horizontal_borders) and \
                     not any(pygame.sprite.collide_mask(player, spr) for spr in rigid_group.sprites()):
@@ -389,6 +420,8 @@ if __name__ == '__main__':
             ctr = (ctr + 1) % transi_step
             if ctr == 0:
                 player.image = dw_images[dcounter]
+                if player.blood:
+                    player.image.blit(blood_img, (0, 0))
                 dcounter = (dcounter + 1) % len(dw_images)
             if not pygame.sprite.spritecollideany(player, horizontal_borders) and \
                     not any(pygame.sprite.collide_mask(player, spr) for spr in rigid_group.sprites()):
@@ -401,6 +434,79 @@ if __name__ == '__main__':
                 motion = 'stop'
 
         # в главном игровом цикле
+
+        # Положение волка
+
+        w_dir_ctr = (w_dir_ctr + 1) % w_transi_step
+        if w_dir_ctr == 0:
+            w_direct = random.choice(['L', 'R', 'U', 'D'])
+            w_transi_step = random.randint(50, 80)
+            w_ctr = 0
+        if w_direct == 'R':
+            if not pygame.sprite.spritecollideany(wolf, vertical_borders) and \
+                    not any(pygame.sprite.collide_mask(wolf, spr) for spr in rigid_group.sprites()):
+                w_prev_x, w_prev_y = wolf.rect.x, wolf.rect.y
+                wolf.rect.x += step
+
+                w_ctr = (w_ctr + 1) % transi_step
+                if w_ctr == 0:
+                    wolf.image = wr_images[wrcounter]
+                    wrcounter = (wrcounter + 1) % len(wr_images)
+                if pygame.sprite.spritecollideany(wolf, vertical_borders) or \
+                        any(pygame.sprite.collide_mask(wolf, spr) for spr in rigid_group.sprites()):
+                    wolf.rect.x, wolf.rect.y = w_prev_x, w_prev_y
+                    w_direct = 'L'
+                if pygame.sprite.collide_mask(wolf, player):
+                    player.blood = True
+        elif w_direct == 'L':
+            if not pygame.sprite.spritecollideany(wolf, vertical_borders) and \
+                    not any(pygame.sprite.collide_mask(wolf, spr) for spr in rigid_group.sprites()):
+                w_prev_x, w_prev_y = wolf.rect.x, wolf.rect.y
+                wolf.rect.x -= step
+
+                w_ctr = (w_ctr + 1) % transi_step
+                if w_ctr == 0:
+                    wolf.image = wl_images[wlcounter]
+                    wlcounter = (wlcounter + 1) % len(wl_images)
+                if pygame.sprite.spritecollideany(wolf, vertical_borders) or \
+                        any(pygame.sprite.collide_mask(wolf, spr) for spr in rigid_group.sprites()):
+                    wolf.rect.x, wolf.rect.y = w_prev_x, w_prev_y
+                    w_direct = 'R'
+                if pygame.sprite.collide_mask(wolf, player):
+                    player.blood = True
+        elif w_direct == 'U':
+            if not pygame.sprite.spritecollideany(wolf, horizontal_borders) and \
+                    not any(pygame.sprite.collide_mask(wolf, spr) for spr in rigid_group.sprites()):
+                w_prev_x, w_prev_y = wolf.rect.x, wolf.rect.y
+                wolf.rect.y -= step
+
+                w_ctr = (w_ctr + 1) % transi_step
+                if w_ctr == 0:
+                    wolf.image = wu_images[wucounter]
+                    wucounter = (wucounter + 1) % len(wu_images)
+                if pygame.sprite.spritecollideany(wolf, horizontal_borders) or \
+                        any(pygame.sprite.collide_mask(wolf, spr) for spr in rigid_group.sprites()):
+                    wolf.rect.x, wolf.rect.y = w_prev_x, w_prev_y
+                    w_direct = 'D'
+                if pygame.sprite.collide_mask(wolf, player):
+                    player.blood = True
+        elif w_direct == 'D':
+            if not pygame.sprite.spritecollideany(wolf, horizontal_borders) and \
+                    not any(pygame.sprite.collide_mask(wolf, spr) for spr in rigid_group.sprites()):
+                w_prev_x, w_prev_y = wolf.rect.x, wolf.rect.y
+                wolf.rect.y += step
+
+                w_ctr = (w_ctr + 1) % transi_step
+                if w_ctr == 0:
+                    wolf.image = wd_images[wdcounter]
+                    wdcounter = (wdcounter + 1) % len(wd_images)
+                if pygame.sprite.spritecollideany(wolf, horizontal_borders) or \
+                        any(pygame.sprite.collide_mask(wolf, spr) for spr in rigid_group.sprites()):
+                    wolf.rect.x, wolf.rect.y = w_prev_x, w_prev_y
+                    w_direct = 'U'
+                if pygame.sprite.collide_mask(wolf, player):
+                    player.blood = True
+
         screen.fill(BG)
         camera.update(player)
         # # обновляем положение всех спрайтов
@@ -416,7 +522,6 @@ if __name__ == '__main__':
         player_group.draw(screen)
         wolf_group.draw(screen)
         up_layers_group.draw(screen)
-
 
         clock.tick(FPS)
         pygame.display.flip()
